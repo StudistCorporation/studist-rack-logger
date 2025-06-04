@@ -7,3 +7,4 @@ gemspec
 
 gem 'rackup'
 gem 'sinatra'
+gem 'puma'

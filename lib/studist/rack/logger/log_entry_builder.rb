@@ -5,11 +5,34 @@ require 'socket'
 module Studist
   module Rack
     module Logger
+      # Builds structured log entries from request context.
+      #
+      # This class extracts and organizes request/response information into
+      # a standardized hash structure with 18 fields following Studist's
+      # common log format specification.
+      #
+      # @api private
       class LogEntryBuilder
+        # Initializes the builder with configuration options.
+        #
+        # @param options [Hash] Configuration options including extractors
         def initialize(options)
           @options = options
         end
 
+        # Builds a complete log entry from request context.
+        #
+        # Combines basic metadata, request information, response details,
+        # and user context into a unified log entry structure.
+        #
+        # @param context [Hash] Request processing context
+        # @option context [Hash] :env Rack environment
+        # @option context [Rack::Request] :request Request object
+        # @option context [Integer] :status HTTP status code
+        # @option context [Hash] :headers Response headers
+        # @option context [Integer] :response_time_ms Response time in milliseconds
+        # @option context [Time] :start_time Request start time
+        # @return [Hash] Complete log entry with standardized fields
         def build(context)
           basic_fields(context).merge(
             request_fields(context),

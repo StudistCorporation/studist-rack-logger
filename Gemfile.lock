@@ -17,11 +17,14 @@ GEM
     logger (1.7.0)
     mustermann (3.0.3)
       ruby2_keywords (~> 0.0.1)
+    nio4r (2.7.4)
     parallel (1.27.0)
     parser (3.3.8.0)
       ast (~> 2.4.1)
       racc
     prism (1.4.0)
+    puma (6.6.0)
+      nio4r (~> 2.0)
     racc (1.8.1)
     rack (3.1.15)
     rack-protection (4.1.1)
@@ -78,12 +81,15 @@ GEM
     unicode-display_width (3.1.4)
       unicode-emoji (~> 4.0, >= 4.0.4)
     unicode-emoji (4.0.4)
+    yard (0.9.37)
 
 PLATFORMS
   arm64-darwin-23
   ruby
 
 DEPENDENCIES
+  bundler (~> 2.0)
+  puma
   rack-test (~> 2.0)
   rackup
   rake (~> 13.0)
@@ -91,6 +97,7 @@ DEPENDENCIES
   rubocop (~> 1.21)
   sinatra
   studist-rack-logger!
+  yard (~> 0.9)
 
 BUNDLED WITH
    2.5.22

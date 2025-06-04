@@ -7,7 +7,26 @@ require_relative 'log_entry_builder'
 module Studist
   module Rack
     module Logger
+      # Core middleware that intercepts Rack requests and generates structured logs.
+      #
+      # This class handles the actual request processing, timing measurement, and log generation.
+      # It extracts comprehensive request/response information and formats it according to
+      # Studist's unified logging standard.
+      #
+      # @api private
       class Middleware
+        # Initializes the middleware with a Rack application and configuration options.
+        #
+        # @param app [#call] The Rack application to wrap
+        # @param options [Hash] Configuration options
+        # @option options [String] :app_id ('unknown') Application identifier
+        # @option options [Symbol] :format (:json) Log format - :json or :ltsv
+        # @option options [Logger] :logger (Logger.new($stdout)) Logger instance
+        # @option options [String] :log_version ('1.0.0') Log schema version
+        # @option options [Proc] :user_id_extractor (nil) Extract user ID from request
+        # @option options [Proc] :user_group_id_extractor (nil) Extract user group ID
+        # @option options [Proc] :user_authority_extractor (nil) Extract user authority
+        # @option options [Proc] :normalized_uri_extractor (nil) Extract normalized URI pattern
         def initialize(app, options = {})
           @app = app
           @options = default_options.merge(options)
@@ -16,6 +35,14 @@ module Studist
           @log_entry_builder = LogEntryBuilder.new(@options)
         end
 
+        # Processes a Rack request and generates structured logs.
+        #
+        # This method wraps the application call, measures response time, and generates
+        # a log entry with all standardized fields. It handles both successful responses
+        # and exceptions.
+        #
+        # @param env [Hash] The Rack environment hash
+        # @return [Array] Standard Rack response array [status, headers, body]
         def call(env)
           start_time = Time.now
           request = ::Rack::Request.new(env)
