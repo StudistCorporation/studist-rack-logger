@@ -21,7 +21,7 @@ module Studist
     #
     # @example Rails configuration
     #   # In config/application.rb
-    #   config.middleware.use Studist::Rack::Logger, 
+    #   config.middleware.use Studist::Rack::Logger,
     #     app_id: 'my-rails-app',
     #     format: :json,
     #     logger: Rails.logger
