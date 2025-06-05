@@ -11,9 +11,7 @@ RSpec.describe Studist::Rack::Logger::Middleware do
   let(:options) { { logger: logger, app_id: 'test_app', log_version: '1.0.0' } }
   let(:middleware) { described_class.new(base_app, options) }
 
-  def app
-    middleware
-  end
+  let(:app) { middleware }
 
   describe '#call' do
     context 'with successful request' do
@@ -167,9 +165,7 @@ RSpec.describe Studist::Rack::Logger::Middleware do
   describe 'default options' do
     let(:default_middleware) { described_class.new(base_app) }
 
-    def app
-      default_middleware
-    end
+    let(:app) { default_middleware }
 
     before { get '/test' }
 
