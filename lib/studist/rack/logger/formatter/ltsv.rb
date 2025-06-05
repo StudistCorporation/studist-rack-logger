@@ -20,8 +20,28 @@ module Studist
           # @return [String] Tab-separated labeled values with proper escaping
           def format(log_entry)
             log_entry.compact
-                     .map { |key, value| "#{key}:#{escape_ltsv_value(serialize_value(value))}" }
+                     .map { |key, value| "#{key}:#{escape_value(serialize_value(value))}" }
                      .join("\t")
+          end
+
+          private
+
+          def serialize_value(value)
+            return '' if value.nil?
+            return value if value.is_a?(String)
+            return value.to_s if value.is_a?(Integer) || value.is_a?(Float)
+            return value.iso8601(3) if value.is_a?(Time)
+
+            value.to_s
+          end
+
+          def escape_value(value)
+            return '' if value.nil?
+
+            value.to_s
+                 .gsub("\t", '\\t')
+                 .gsub("\n", '\\n')
+                 .gsub("\r", '\\r')
           end
         end
       end
