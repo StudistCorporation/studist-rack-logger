@@ -5,6 +5,8 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in studist-rack-logger.gemspec
 gemspec
 
-gem 'rackup'
-gem 'sinatra'
-gem 'puma'
+group :development do
+  gem 'rackup'
+  gem 'sinatra'
+  gem 'puma'
+end
