@@ -26,23 +26,23 @@ module Studist
 
           private
 
-          def serialize_value(value)
-            return '' if value.nil?
-            return value if value.is_a?(String)
-            return value.to_s if value.is_a?(Integer) || value.is_a?(Float)
-            return value.iso8601(3) if value.is_a?(Time)
+            def serialize_value(value)
+              return '' if value.nil?
+              return value if value.is_a?(String)
+              return value.to_s if value.is_a?(Integer) || value.is_a?(Float)
+              return value.iso8601(3) if value.is_a?(Time)
 
-            value.to_s
-          end
+              value.to_s
+            end
 
-          def escape_value(value)
-            return '' if value.nil?
+            def escape_value(value)
+              return '' if value.nil?
 
-            value.to_s
-                 .gsub("\t", '\\t')
-                 .gsub("\n", '\\n')
-                 .gsub("\r", '\\r')
-          end
+              value.to_s
+                   .gsub("\t", '\\t')
+                   .gsub("\n", '\\n')
+                   .gsub("\r", '\\r')
+            end
         end
       end
     end

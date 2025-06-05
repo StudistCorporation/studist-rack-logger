@@ -32,6 +32,9 @@ module Studist
         # @option context [Hash] :headers Response headers
         # @option context [Integer] :response_time_ms Response time in milliseconds
         # @option context [Time] :start_time Request start time
+        # @option context [String] :hostname Cached hostname
+        # @option context [Boolean] :error Whether this is an error response
+        # @option context [Hash] :error Error details (class, message, backtrace) when error: true
         # @return [Hash] Complete log entry with standardized fields
         def build(context)
           basic_fields(context).merge(
@@ -96,6 +99,10 @@ module Studist
           end
 
           def extract_server_name(_env)
+            # Use cached hostname from middleware if available
+            return @hostname if defined?(@hostname) && @hostname
+
+            # Fallback to system hostname
             Socket.gethostname
           rescue StandardError
             'unknown'

@@ -10,8 +10,8 @@ Gem::Specification.new do |s|
   s.authors = ['Studist Corporation']
   s.email = ['contact-dev@studist.jp']
   s.homepage = 'https://github.com/StudistCorporation/studist-rack-logger'
-  s.summary = "Unified logging middleware for Rack applications following Studist's common log format"
-  s.description = 'A Rack middleware that provides structured JSON logging with unified format across all Studist services. Supports 18 standardized fields including timestamp, trace_id, user information, and response metrics.'
+  s.summary = "Unified logging middleware for Rack applications with Configuration DSL and advanced filtering"
+  s.description = 'A production-ready Rack middleware that provides structured JSON/LTSV logging with unified format across all Studist services. Features a powerful Configuration DSL, request sampling, advanced filtering, and 18 standardized fields including timestamp, trace_id, user information, and response metrics.'
   s.license = 'MIT'
 
   s.files = Dir['{lib}/**/*', 'LICENSE', 'Rakefile', 'README.md']
