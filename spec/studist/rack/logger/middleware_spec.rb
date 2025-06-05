@@ -201,4 +201,166 @@ RSpec.describe Studist::Rack::Logger::Middleware do
       end
     end
   end
+
+  describe 'complete log output verification' do
+    context 'comprehensive test with all 18 fields' do
+      let(:base_app) do
+        proc { |_env|
+          [201, { 'Content-Length' => '250', 'Content-Type' => 'application/json' }, ['{"data":"test"}']]
+        }
+      end
+      let(:options) do
+        {
+          logger: logger,
+          app_id: 'comprehensive_test_app',
+          log_version: '2.0.0',
+          user_id_extractor: ->(_env, _req) { 'user789' },
+          user_group_id_extractor: ->(_env, _req) { 'group123' },
+          user_authority_extractor: ->(_env, _req) { 'editor' },
+          normalized_uri_extractor: ->(_env, _req) { '/api/test/:id' },
+        }
+      end
+
+      before do
+        header 'X-Amzn-Trace-Id', 'Root=1-test-trace-id'
+        header 'X-Forwarded-For', '192.168.1.100, 10.0.0.1'
+        header 'User-Agent', 'TestAgent/1.0'
+        header 'Referer', 'https://test.example.com/previous'
+        header 'Content-Length', '15'
+        post '/api/test/123?filter=active&sort=name', 'test post data'
+      end
+
+      it 'outputs all 18 specification fields in JSON format' do
+        log_entry = JSON.parse(log_output.string.strip)
+
+        # Basic fields (6 items)
+        expect(log_entry).to have_key('timestamp')
+        expect(log_entry['timestamp']).to match(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/)
+        expect(log_entry['log_version']).to eq('2.0.0')
+        expect(log_entry['app_id']).to eq('comprehensive_test_app')
+        expect(log_entry).to have_key('trace_id')
+        expect(log_entry['trace_id']).to eq('Root=1-test-trace-id')
+        expect(log_entry).to have_key('request_id')
+        expect(log_entry['request_id']).to match(/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/)
+        expect(log_entry).to have_key('server_name')
+        expect(log_entry['server_name']).to be_a(String)
+
+        # Request fields (7 items)
+        expect(log_entry['status_code']).to eq(201)
+        expect(log_entry['request_method']).to eq('POST')
+        expect(log_entry['request_url']).to eq('http://example.org/api/test/123?filter=active&sort=name')
+        expect(log_entry['request_body_size']).to eq(15)
+        expect(log_entry['query_string']).to eq('filter=active&sort=name')
+        expect(log_entry['host']).to eq('example.org')
+        expect(log_entry['user_agent']).to eq('TestAgent/1.0')
+        expect(log_entry['referer']).to eq('https://test.example.com/previous')
+        expect(log_entry['remote_addr']).to eq('192.168.1.100')
+        expect(log_entry['x_forwarded_for']).to eq('192.168.1.100, 10.0.0.1')
+
+        # Response fields (2 items)
+        expect(log_entry).to have_key('response_time_ms')
+        expect(log_entry['response_time_ms']).to be_a(Integer)
+        expect(log_entry['response_body_size']).to eq(250)
+
+        # User fields (3 items)
+        expect(log_entry['normalized_uri']).to eq('/api/test/:id')
+        expect(log_entry['user_id']).to eq('user789')
+        expect(log_entry['user_group_id']).to eq('group123')
+        expect(log_entry['user_authority']).to eq('editor')
+
+        # Verify total count of fields matches specification
+        expected_fields = %w[
+          timestamp log_version app_id trace_id request_id server_name
+          status_code request_method request_url request_body_size query_string host
+          user_agent referer remote_addr x_forwarded_for response_time_ms response_body_size
+          normalized_uri user_id user_group_id user_authority
+        ]
+        expect(log_entry.keys.sort).to eq(expected_fields.sort)
+      end
+    end
+
+    context 'LTSV format with all 18 fields' do
+      let(:options) do
+        {
+          logger: logger,
+          app_id: 'ltsv_test_app',
+          format: :ltsv,
+          user_id_extractor: ->(_env, _req) { 'ltsv_user' },
+          user_group_id_extractor: ->(_env, _req) { 'ltsv_group' },
+          user_authority_extractor: ->(_env, _req) { 'ltsv_admin' },
+          normalized_uri_extractor: ->(_env, _req) { '/ltsv/test' },
+        }
+      end
+
+      before do
+        header 'X-Amzn-Trace-Id', 'ltsv-trace'
+        header 'Content-Length', '20'
+        post '/test', 'ltsv test data'
+      end
+
+      it 'outputs all fields in LTSV format' do
+        log_line = log_output.string.strip
+
+        # Check for all 18 specification fields in LTSV format
+        expect(log_line).to include('timestamp:')
+        expect(log_line).to include('log_version:')
+        expect(log_line).to include('app_id:ltsv_test_app')
+        expect(log_line).to include('trace_id:ltsv-trace')
+        expect(log_line).to include('request_id:')
+        expect(log_line).to include('server_name:')
+        expect(log_line).to include('status_code:200')
+        expect(log_line).to include('request_method:POST')
+        expect(log_line).to include('request_url:')
+        expect(log_line).to include('request_body_size:20')
+        expect(log_line).to include('host:example.org')
+        expect(log_line).to include('response_time_ms:')
+        expect(log_line).to include('normalized_uri:/ltsv/test')
+        expect(log_line).to include('user_id:ltsv_user')
+        expect(log_line).to include('user_group_id:ltsv_group')
+        expect(log_line).to include('user_authority:ltsv_admin')
+
+        # Verify LTSV format structure
+        expect(log_line).to include("\t")
+        expect(log_line).not_to include('{')
+      end
+    end
+
+    context 'nil value handling verification' do
+      let(:base_app) { proc { |_env| [200, {}, ['']] } }
+
+      before { get '/test' }
+
+      it 'handles nil values appropriately' do
+        log_entry = JSON.parse(log_output.string.strip)
+
+        # Fields that should never be nil (required by specification)
+        expect(log_entry['timestamp']).not_to be_nil
+        expect(log_entry['log_version']).not_to be_nil
+        expect(log_entry['app_id']).not_to be_nil
+        expect(log_entry['request_id']).not_to be_nil
+        expect(log_entry['server_name']).not_to be_nil
+        expect(log_entry['status_code']).not_to be_nil
+        expect(log_entry['request_method']).not_to be_nil
+        expect(log_entry['request_url']).not_to be_nil
+        expect(log_entry['host']).not_to be_nil
+        expect(log_entry['response_time_ms']).not_to be_nil
+
+        # Fields that can be nil but are omitted due to .compact
+        expect(log_entry).not_to have_key('query_string') # Empty query string
+        expect(log_entry).not_to have_key('user_agent') # Not provided
+        expect(log_entry).not_to have_key('referer') # Not provided
+        expect(log_entry).not_to have_key('trace_id') # Not provided
+        expect(log_entry).not_to have_key('x_forwarded_for') # Not provided
+        expect(log_entry).not_to have_key('request_body_size') # No content-length
+        expect(log_entry).not_to have_key('response_body_size') # No content-length
+        expect(log_entry).not_to have_key('normalized_uri') # No extractor
+        expect(log_entry).not_to have_key('user_id') # No extractor
+        expect(log_entry).not_to have_key('user_group_id') # No extractor
+        expect(log_entry).not_to have_key('user_authority') # No extractor
+
+        # remote_addr should have a fallback value even without headers
+        expect(log_entry).to have_key('remote_addr')
+      end
+    end
+  end
 end
