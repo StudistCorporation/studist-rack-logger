@@ -9,6 +9,9 @@ require_relative 'log_entry_builder'
 module Studist
   module Rack
     module Logger
+      # Struct for standardizing response data
+      Response = Struct.new(:status, :headers, keyword_init: true)
+
       # Core middleware that intercepts Rack requests and generates structured logs.
       #
       # This class handles the actual request processing, timing measurement, and log generation.
@@ -108,7 +111,8 @@ module Studist
           def process_request(env, request, start_time)
             status, headers, body = @app.call(env)
 
-            log_context = create_log_context(env, request, status, headers, start_time, false)
+            response = Response.new(status: status, headers: headers)
+            log_context = create_log_context(env, request, response, start_time)
 
             safe_log_request(log_context) if should_log?(log_context)
 
@@ -116,7 +120,8 @@ module Studist
           end
 
           def handle_error(env, request, start_time, error)
-            log_context = create_log_context(env, request, 500, {}, start_time, true)
+            response = Response.new(status: 500, headers: {})
+            log_context = create_log_context(env, request, response, start_time, is_error: true)
             log_context[:error] = {
               class: error.class.name,
               message: error.message,
@@ -128,13 +133,13 @@ module Studist
             raise error
           end
 
-          def create_log_context(env, request, status, headers, start_time, is_error = false)
+          def create_log_context(env, request, response, start_time, is_error: false)
             {
               env: env,
               request: request,
               request_path: request.path,
-              status: status,
-              headers: headers,
+              status: response.status,
+              headers: response.headers,
               response_time_ms: calculate_response_time(start_time),
               start_time: start_time,
               hostname: @hostname,
