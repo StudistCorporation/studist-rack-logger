@@ -36,15 +36,6 @@ module Studist
           'fe80::/10' # link-local IPv6
         ].freeze
 
-        # Headers that may contain client IP information
-        # Order matters: X-Forwarded-For has highest precedence for multi-proxy chains
-        IP_HEADERS = %w[
-          HTTP_X_FORWARDED_FOR
-          HTTP_X_REAL_IP
-          HTTP_CLIENT_IP
-          REMOTE_ADDR
-        ].freeze
-
         attr_reader :trusted_proxies
 
         # Initialize with trusted proxy configuration
@@ -60,11 +51,53 @@ module Studist
         # @param env [Hash] Rack environment hash
         # @return [String, nil] The real client IP address, or nil if none found
         def call(env)
-          remote_addrs = extract_remote_addrs(env)
-          filter_proxies(remote_addrs)
+          remote_addr = extract_remote_addr(env)
+          return remote_addr&.to_s unless should_process_headers?(remote_addr)
+
+          # Try forwarded headers in order of preference
+          process_forwarded_headers(env, remote_addr) || remote_addr&.to_s
         end
 
         private
+
+          def extract_remote_addr(env)
+            normalize_ip(env['REMOTE_ADDR']) if env['REMOTE_ADDR']
+          end
+
+          def should_process_headers?(remote_addr)
+            remote_addr && trusted_proxy?(remote_addr)
+          end
+
+          def process_forwarded_headers(env, remote_addr)
+            process_x_forwarded_for(env, remote_addr) ||
+              process_fallback_headers(env, remote_addr)
+          end
+
+          def process_x_forwarded_for(env, remote_addr)
+            forwarded_ips = extract_forwarded_for_ips(env['HTTP_X_FORWARDED_FOR'])
+            return nil if forwarded_ips.empty?
+
+            # Add REMOTE_ADDR to the end of the chain for complete processing
+            all_ips = forwarded_ips + [remote_addr]
+            filter_proxies(all_ips, remote_addr)
+          end
+
+          def process_fallback_headers(env, remote_addr)
+            fallback_headers = %w[HTTP_X_REAL_IP HTTP_CLIENT_IP]
+            fallback_headers.each do |header|
+              result = process_single_header(env, header, remote_addr)
+              return result if result
+            end
+            nil
+          end
+
+          def process_single_header(env, header, remote_addr)
+            value = env[header]
+            return nil if value.nil? || value.strip.empty?
+
+            ip = normalize_ip(value.strip)
+            filter_proxies([ip, remote_addr], remote_addr) if ip
+          end
 
           def build_trusted_proxies(custom_proxies)
             proxy_list = custom_proxies || DEFAULT_TRUSTED_PROXIES
@@ -80,24 +113,6 @@ module Studist
             end
           rescue IPAddr::InvalidAddressError
             nil
-          end
-
-          def extract_remote_addrs(env)
-            # Process headers in priority order, X-Forwarded-For takes precedence
-            forwarded_ips = extract_forwarded_for_ips(env['HTTP_X_FORWARDED_FOR'])
-            return forwarded_ips unless forwarded_ips.empty?
-
-            # Fallback to other headers if X-Forwarded-For is empty/missing
-            fallback_headers = %w[HTTP_X_REAL_IP HTTP_CLIENT_IP REMOTE_ADDR]
-            fallback_headers.each do |header|
-              value = env[header]
-              next if value.nil? || value.strip.empty?
-
-              ip = normalize_ip(value.strip)
-              return [ip] if ip
-            end
-
-            []
           end
 
           def extract_forwarded_for_ips(forwarded_for_value)
@@ -125,7 +140,7 @@ module Studist
             nil
           end
 
-          def filter_proxies(ip_addrs)
+          def filter_proxies(ip_addrs, fallback_ip = nil)
             # Work backwards through the IP chain to find the first non-proxy IP
             ip_addrs.reverse.each do |ip_addr|
               next if trusted_proxy?(ip_addr)
@@ -133,8 +148,8 @@ module Studist
               return ip_addr.to_s
             end
 
-            # If all IPs are proxies, return the last one (REMOTE_ADDR)
-            ip_addrs.last&.to_s
+            # If all IPs are proxies, return the fallback (usually REMOTE_ADDR)
+            fallback_ip&.to_s || ip_addrs.last&.to_s
           end
 
           def trusted_proxy?(ip_addr)
