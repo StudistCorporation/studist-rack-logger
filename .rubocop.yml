@@ -1,0 +1,57 @@
+AllCops:
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - "bin/**/*"
+    - "vendor/**/*"
+    - "Gemfile"
+    - "Gemfile.lock"
+    - "*.gemspec"
+
+# 不要なreturnは省略する指摘
+Style/RedundantReturn:
+  Enabled: false
+
+Style/AsciiComments:
+  Enabled: false
+
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: consistent_comma
+
+Layout/EmptyLinesAroundClassBody:
+  Enabled: false
+
+Layout/EmptyLinesAroundModuleBody:
+  Enabled: false
+
+Layout/IndentationConsistency:
+  EnforcedStyle: indented_internal_methods
+
+Layout/LeadingCommentSpace:
+  AllowRBSInlineAnnotation: true
+
+Style/Documentation:
+  Enabled: false
+
+Style/ClassAndModuleChildren:
+  Enabled: false
+
+Layout/LineLength:
+  # (default: 120)
+  Max: 120
+
+Style/AndOr:
+  EnforcedStyle: conditionals
+
+Layout/EmptyLineAfterGuardClause:
+  Enabled: false
+
+Metrics/ClassLength:
+  CountAsOne: ["hash", "array", "heredoc"]
+
+Metrics/MethodLength:
+  CountAsOne: ["hash", "array", "heredoc"]
+
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*"
