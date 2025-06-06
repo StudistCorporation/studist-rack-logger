@@ -12,6 +12,7 @@ RSpec.describe Studist::Rack::Logger::Configuration do
       expect(config.log_version).to eq('1.0.0')
       expect(config.sampling_rate).to eq(1.0)
       expect(config.error_sampling_rate).to eq(1.0)
+      expect(config.trusted_proxies).to be_nil
       expect(config.extractors).to be_empty
       expect(config.filters).to be_empty
       expect(config.skip_paths).to be_empty
@@ -125,6 +126,7 @@ RSpec.describe Studist::Rack::Logger::Configuration do
       config.app_id = 'test-app'
       config.format = :ltsv
       config.sampling_rate = 0.5
+      config.trusted_proxies = ['10.0.0.0/8']
       config.extractor(:user_id) { |env, _req| env['user.id'] }
       config.extractor(:user_group_id) { |env, _req| env['user.group'] }
 
@@ -133,6 +135,7 @@ RSpec.describe Studist::Rack::Logger::Configuration do
       expect(options[:app_id]).to eq('test-app')
       expect(options[:format]).to eq(:ltsv)
       expect(options[:sampling_rate]).to eq(0.5)
+      expect(options[:trusted_proxies]).to eq(['10.0.0.0/8'])
       expect(options[:user_id_extractor]).to be_a(Proc)
       expect(options[:user_group_id_extractor]).to be_a(Proc)
     end

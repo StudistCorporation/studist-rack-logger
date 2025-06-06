@@ -44,6 +44,56 @@ RSpec.describe Studist::Rack::Logger::Middleware do
       end
     end
 
+    context 'with trusted proxy configuration' do
+      let(:options) do
+        {
+          logger: logger,
+          app_id: 'test_app',
+          log_version: '1.0.0',
+          trusted_proxies: ['10.0.0.0/8', '172.16.0.0/12'],
+        }
+      end
+
+      context 'with X-Forwarded-For from trusted proxy' do
+        before do
+          header 'X-Forwarded-For', '203.0.113.1, 198.51.100.1'
+          env 'REMOTE_ADDR', '10.0.0.1' # trusted proxy
+          get '/test'
+        end
+
+        it 'extracts real client IP from X-Forwarded-For' do
+          log_entry = JSON.parse(log_output.string.strip)
+          expect(log_entry['remote_addr']).to eq('198.51.100.1')
+        end
+      end
+
+      context 'with X-Forwarded-For from untrusted proxy' do
+        before do
+          header 'X-Forwarded-For', '203.0.113.1'
+          env 'REMOTE_ADDR', '198.51.100.1' # untrusted proxy
+          get '/test'
+        end
+
+        it 'uses REMOTE_ADDR when proxy is not trusted' do
+          log_entry = JSON.parse(log_output.string.strip)
+          expect(log_entry['remote_addr']).to eq('198.51.100.1')
+        end
+      end
+
+      context 'with IPv4-mapped IPv6 address' do
+        before do
+          header 'X-Forwarded-For', '::ffff:203.0.113.1'
+          env 'REMOTE_ADDR', '10.0.0.1'
+          get '/test'
+        end
+
+        it 'converts IPv4-mapped IPv6 to IPv4' do
+          log_entry = JSON.parse(log_output.string.strip)
+          expect(log_entry['remote_addr']).to eq('203.0.113.1')
+        end
+      end
+    end
+
     context 'with trace_id header' do
       before do
         header 'X-Amzn-Trace-Id', 'Root=1-5e1b4151-5ac6c58142935a3c7c42d1c7'
@@ -62,9 +112,10 @@ RSpec.describe Studist::Rack::Logger::Middleware do
         get '/test'
       end
 
-      it 'extracts remote_addr from X-Forwarded-For' do
+      it 'extracts remote_addr from X-Forwarded-For using trusted proxy logic' do
         log_entry = JSON.parse(log_output.string.strip)
-        expect(log_entry['remote_addr']).to eq('203.0.113.195')
+        # With trusted proxy filtering, it finds the last untrusted IP in the chain
+        expect(log_entry['remote_addr']).to eq('150.172.238.178')
         expect(log_entry['x_forwarded_for']).to eq('203.0.113.195, 70.41.3.18, 150.172.238.178')
       end
     end
@@ -254,7 +305,8 @@ RSpec.describe Studist::Rack::Logger::Middleware do
         expect(log_entry['host']).to eq('example.org')
         expect(log_entry['user_agent']).to eq('TestAgent/1.0')
         expect(log_entry['referer']).to eq('https://test.example.com/previous')
-        expect(log_entry['remote_addr']).to eq('192.168.1.100')
+        # With trusted proxy filtering, both IPs are private so falls back to REMOTE_ADDR
+        expect(log_entry['remote_addr']).to eq('127.0.0.1') # Default test REMOTE_ADDR
         expect(log_entry['x_forwarded_for']).to eq('192.168.1.100, 10.0.0.1')
 
         # Response fields (2 items)

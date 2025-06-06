@@ -18,6 +18,7 @@ module Studist
         # @param options [Hash] Configuration options including extractors
         def initialize(options)
           @options = options
+          @remote_ip_extractor = RemoteIp.new(trusted_proxies: options[:trusted_proxies])
         end
 
         # Builds a complete log entry from request context.
@@ -118,12 +119,8 @@ module Studist
           end
 
           def extract_remote_addr(env)
-            forwarded_for = env['HTTP_X_FORWARDED_FOR']
-            if forwarded_for
-              forwarded_for.split(',').first.strip
-            else
-              env['HTTP_X_REAL_IP'] || env['REMOTE_ADDR']
-            end
+            # Use the secure RemoteIp extractor that handles trusted proxies
+            @remote_ip_extractor.call(env) || env['REMOTE_ADDR']
           end
 
           def extract_response_body_size(headers)

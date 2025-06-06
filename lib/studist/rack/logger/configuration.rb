@@ -22,19 +22,20 @@ module Studist
       #     config.skip_if { |context| context[:status] == 200 }
       #   end
       class Configuration
-        attr_accessor :app_id, :format, :logger, :log_version, :sampling_rate, :error_sampling_rate
+        attr_accessor :app_id, :format, :logger, :log_version, :sampling_rate, :error_sampling_rate, :trusted_proxies
         attr_reader :extractors, :filters, :skip_paths, :skip_conditions
 
         # Valid log formats
         VALID_FORMATS = %i[json ltsv].freeze
 
-        def initialize
+        def initialize # rubocop:disable Metrics/MethodLength
           @app_id = 'unknown'
           @format = :json
           @logger = nil
           @log_version = '1.0.0'
           @sampling_rate = 1.0
           @error_sampling_rate = 1.0
+          @trusted_proxies = nil
           @extractors = {}
           @filters = []
           @skip_paths = []
@@ -104,6 +105,7 @@ module Studist
             log_version: @log_version,
             sampling_rate: @sampling_rate,
             error_sampling_rate: @error_sampling_rate,
+            trusted_proxies: @trusted_proxies,
             **extractor_options,
           }
         end

@@ -97,6 +97,7 @@ use Studist::Rack::Logger,
 | `user_group_id_extractor` | Proc | `nil` | Extract user group ID |
 | `user_authority_extractor` | Proc | `nil` | Extract user authority |
 | `normalized_uri_extractor` | Proc | `nil` | Extract normalized URI pattern |
+| `trusted_proxies` | Array | RFC 1918 ranges | Trusted proxy IP ranges for secure IP extraction |
 
 ## 📊 Log Fields
 
@@ -154,6 +155,7 @@ Outputs **18 standardized fields** including:
 - **Custom extractors** - Flexible user/URI extraction
 - **Advanced filtering** - Skip paths, conditions, and custom filters
 - **Sampling support** - Separate rates for requests and errors
+- **Trusted proxy filtering** - Secure IP extraction with Rails-compatible proxy handling
 - **Error handling** - Logs exceptions with 500 status and backtrace
 - **Performance optimized** - Hostname caching, efficient sampling
 - **Production ready** - Safe fallbacks, never fails your app
@@ -184,6 +186,9 @@ Studist::Rack::Logger.configure do |config|
     context[:request_path].start_with?('/admin') && 
     context[:status] == 200
   end
+  
+  # Trusted proxy configuration for secure IP extraction
+  config.trusted_proxies = ['10.0.0.0/8', '172.16.0.0/12']
   
   # Only log errors and slow requests
   config.filter do |context|
@@ -229,6 +234,10 @@ class Application < Rails::Application
     config.logger = Rails.logger
     config.sampling_rate = Rails.env.production? ? 0.1 : 1.0
     config.skip_paths = %w[/health /assets]
+    
+    # Configure trusted proxies for production
+    config.trusted_proxies = Rails.env.production? ? 
+      ['10.0.0.0/8', '172.16.0.0/12'] : nil
     
     # Extract user from Devise/session
     config.extractor(:user_id) do |env, request|

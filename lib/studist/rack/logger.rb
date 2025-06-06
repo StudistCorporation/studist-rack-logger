@@ -6,6 +6,7 @@ require_relative 'logger/middleware'
 require_relative 'logger/formatter'
 require_relative 'logger/formatter/json'
 require_relative 'logger/formatter/ltsv'
+require_relative 'logger/remote_ip'
 
 # Studist namespace for company-wide Ruby libraries and tools.
 module Studist
