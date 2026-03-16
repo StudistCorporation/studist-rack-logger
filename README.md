@@ -101,7 +101,7 @@ use Studist::Rack::Logger,
 
 ## 📊 Log Fields
 
-Outputs **18 standardized fields** including:
+Outputs **22 standardized fields** including:
 
 ```json
 {

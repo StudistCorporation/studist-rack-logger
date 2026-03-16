@@ -49,8 +49,7 @@ module Studist
 
           @logger = @options[:logger] || create_default_logger
           @formatter = create_formatter(@options[:format])
-          @log_entry_builder = LogEntryBuilder.new(@options)
-          @log_entry_builder.instance_variable_set(:@hostname, @hostname)
+          @log_entry_builder = LogEntryBuilder.new(@options, hostname: @hostname)
         end
 
         # Processes a Rack request and generates structured logs.

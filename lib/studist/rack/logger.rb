@@ -14,7 +14,7 @@ module Studist
   module Rack
     # Unified structured logging middleware for Rack applications following Studist's common log format.
     #
-    # This middleware provides structured JSON or LTSV logging with 18 standardized fields including
+    # This middleware provides structured JSON or LTSV logging with 22 standardized fields including
     # timestamp, trace_id, user information, and response metrics.
     #
     # @example Basic usage
@@ -53,6 +53,9 @@ module Studist
       # All custom exceptions raised by this gem inherit from this class.
       class Error < StandardError; end
 
+      CONFIGURE_MUTEX = Mutex.new
+      private_constant :CONFIGURE_MUTEX
+
       class << self
         # Global configuration instance
         attr_reader :config
@@ -67,14 +70,14 @@ module Studist
         #     config.format = :json
         #   end
         def configure
-          @config ||= Configuration.new
+          CONFIGURE_MUTEX.synchronize { @config ||= Configuration.new }
           yield(@config) if block_given?
           @config
         end
 
         # Reset configuration to defaults
         def reset_config!
-          @config = Configuration.new
+          CONFIGURE_MUTEX.synchronize { @config = Configuration.new }
         end
 
         # Creates a new instance of the logging middleware.
