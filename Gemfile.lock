@@ -78,9 +78,9 @@ GEM
       rack-session (>= 2.0.0, < 3)
       tilt (~> 2.0)
     tilt (2.6.1)
-    unicode-display_width (3.1.4)
-      unicode-emoji (~> 4.0, >= 4.0.4)
-    unicode-emoji (4.0.4)
+    unicode-display_width (3.2.0)
+      unicode-emoji (~> 4.1)
+    unicode-emoji (4.2.0)
     yard (0.9.37)
 
 PLATFORMS
@@ -88,7 +88,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  bundler (~> 2.0)
+  bundler (>= 2.0)
   puma
   rack-test (~> 2.0)
   rackup
