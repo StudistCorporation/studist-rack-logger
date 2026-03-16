@@ -16,12 +16,12 @@ Gem::Specification.new do |s|
 
   s.files = Dir['{lib}/**/*', 'LICENSE', 'Rakefile', 'README.md']
 
-  s.required_ruby_version = '>= 3.0.0', '< 3.5.0'
+  s.required_ruby_version = '>= 3.0.0'
   s.add_dependency 'json', '>= 2.0'
   s.add_dependency 'rack', '>= 2.0'
   s.test_files = Dir['spec/**/*']
 
-  s.add_development_dependency 'bundler', '~> 2.0'
+  s.add_development_dependency 'bundler', '>= 2.0'
   s.add_development_dependency 'rake', '~> 13.0'
   s.add_development_dependency 'rspec', '~> 3.0'
   s.add_development_dependency 'rubocop', '~> 1.21'
