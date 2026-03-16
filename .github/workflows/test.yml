@@ -1,0 +1,72 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  rubocop:
+    runs-on: ubuntu-latest
+    name: RuboCop
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0.1'
+          bundler-cache: true
+      - name: Run RuboCop
+        run: bundle exec rubocop
+
+  yard:
+    runs-on: ubuntu-latest
+    name: YARD Documentation
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0.1'
+          bundler-cache: true
+      - name: Check YARD documentation coverage
+        run: bundle exec yard stats --list-undoc
+
+  test:
+    runs-on: ubuntu-latest
+    name: Ruby ${{ matrix.ruby-version }} / Rack ${{ matrix.rack-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby-version:
+          - '3.0.7'
+          - '3.1.6'
+          - '3.2.6'
+          - '3.3.7'
+          - '3.4.3'
+          - '4.0.1'
+        rack-version:
+          - '2.0.9'
+          - '2.2.9'
+          - '3.0.12'
+          - '3.1.15'
+        exclude: []
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Set up Ruby ${{ matrix.ruby-version }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+          cache-version: rack-${{ matrix.rack-version }}
+      - name: Install specific Rack version
+        run: |
+          bundle config set --local with 'development test'
+          if ! bundle list | grep -q "rack (${{ matrix.rack-version }})"; then
+            bundle update rack --conservative
+            gem install rack -v "${{ matrix.rack-version }}" --force
+          fi
+          bundle list | grep rack
+      - name: Run tests
+        run: bundle exec rspec
+      - name: Run gem build test
+        run: gem build studist-rack-logger.gemspec
