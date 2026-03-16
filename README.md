@@ -13,6 +13,7 @@ gem 'studist-rack-logger'
 
 ## ⚡ Quick Start
 
+### Simple Usage
 ```ruby
 # Rack app
 use Studist::Rack::Logger, app_id: 'my-service'
@@ -21,18 +22,67 @@ use Studist::Rack::Logger, app_id: 'my-service'
 config.middleware.use Studist::Rack::Logger, app_id: 'my-rails-app'
 ```
 
+### Configuration DSL (Recommended)
+```ruby
+# Configure once, use everywhere
+Studist::Rack::Logger.configure do |config|
+  config.app_id = 'my-service'
+  config.format = :json
+  config.sampling_rate = 0.1  # Log 10% of requests
+  config.skip_paths = %w[/health /metrics]
+  config.extractor(:user_id) { |env, req| env['user.id'] }
+end
+
+# Then use without options
+use Studist::Rack::Logger
+```
+
 ## 🔧 Configuration
+
+### Configuration DSL (Recommended)
+
+```ruby
+Studist::Rack::Logger.configure do |config|
+  # Basic settings
+  config.app_id = 'my-service'
+  config.format = :json  # or :ltsv
+  config.logger = Rails.logger
+  config.log_version = '2.0.0'
+  
+  # Performance options
+  config.sampling_rate = 0.1          # Log 10% of requests
+  config.error_sampling_rate = 1.0     # Always log errors
+  
+  # Filtering
+  config.skip_paths = %w[/health /metrics /ping]
+  config.skip_if { |context| context[:status] == 200 && context[:request_path].start_with?('/assets') }
+  
+  # Custom extractors
+  config.extractor(:user_id) { |env, req| env['user.id'] }
+  config.extractor(:user_group_id) { |env, req| env['user.group'] }
+  config.extractor(:user_authority) { |env, req| env['user.role'] }
+  config.extractor(:normalized_uri) { |env, req| normalize_path(req.path) }
+  
+  # Custom filters
+  config.filter { |context| context[:status] != 404 }
+end
+
+use Studist::Rack::Logger
+```
+
+### Hash-based Configuration (Legacy)
 
 ```ruby
 use Studist::Rack::Logger,
   app_id: 'my-service',
-  format: :json,  # or :ltsv
+  format: :json,
   logger: Rails.logger,
+  sampling_rate: 0.1,
   user_id_extractor: ->(env, req) { env['user.id'] },
   normalized_uri_extractor: ->(env, req) { normalize_path(req.path) }
 ```
 
-### Options
+### Configuration Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -40,14 +90,18 @@ use Studist::Rack::Logger,
 | `format` | Symbol | `:json` | Log format (`:json` or `:ltsv`) |
 | `logger` | Logger | `Logger.new($stdout)` | Logger instance |
 | `log_version` | String | `"1.0.0"` | Log schema version |
+| `sampling_rate` | Float | `1.0` | Request sampling rate (0.0-1.0) |
+| `error_sampling_rate` | Float | `1.0` | Error sampling rate (0.0-1.0) |
+| `skip_paths` | Array | `[]` | Paths to skip logging |
 | `user_id_extractor` | Proc | `nil` | Extract user ID from request |
 | `user_group_id_extractor` | Proc | `nil` | Extract user group ID |
 | `user_authority_extractor` | Proc | `nil` | Extract user authority |
 | `normalized_uri_extractor` | Proc | `nil` | Extract normalized URI pattern |
+| `trusted_proxies` | Array | RFC 1918 ranges | Trusted proxy IP ranges for secure IP extraction |
 
 ## 📊 Log Fields
 
-Outputs **18 standardized fields** including:
+Outputs **22 standardized fields** including:
 
 ```json
 {
@@ -95,11 +149,134 @@ Outputs **18 standardized fields** including:
 ## 🎯 Features
 
 - **Zero-config** - Works out of the box
+- **Configuration DSL** - Powerful block-based configuration
 - **Structured logs** - JSON/LTSV formats
 - **Distributed tracing** - AWS X-Ray compatible
 - **Custom extractors** - Flexible user/URI extraction
-- **Error handling** - Logs exceptions with 500 status
-- **Performance focused** - Minimal overhead
+- **Advanced filtering** - Skip paths, conditions, and custom filters
+- **Sampling support** - Separate rates for requests and errors
+- **Trusted proxy filtering** - Secure IP extraction with Rails-compatible proxy handling
+- **Error handling** - Logs exceptions with 500 status and backtrace
+- **Performance optimized** - Hostname caching, efficient sampling
+- **Production ready** - Safe fallbacks, never fails your app
+
+## 🚀 Advanced Usage
+
+### Sampling for High-Traffic Services
+
+```ruby
+Studist::Rack::Logger.configure do |config|
+  config.app_id = 'high-traffic-api'
+  config.sampling_rate = 0.01         # Log 1% of successful requests
+  config.error_sampling_rate = 1.0     # Always log errors
+end
+```
+
+### Conditional Logging
+
+```ruby
+Studist::Rack::Logger.configure do |config|
+  config.app_id = 'my-service'
+  
+  # Skip health checks and assets
+  config.skip_paths = %w[/health /ping /assets]
+  
+  # Skip successful admin requests
+  config.skip_if do |context|
+    context[:request_path].start_with?('/admin') && 
+    context[:status] == 200
+  end
+  
+  # Trusted proxy configuration for secure IP extraction
+  config.trusted_proxies = ['10.0.0.0/8', '172.16.0.0/12']
+  
+  # Only log errors and slow requests
+  config.filter do |context|
+    context[:error] || context[:response_time_ms] > 1000
+  end
+end
+```
+
+### Custom Data Extraction
+
+```ruby
+Studist::Rack::Logger.configure do |config|
+  # Extract user information
+  config.extractor(:user_id) do |env, request|
+    # From JWT token
+    token = env['HTTP_AUTHORIZATION']&.sub(/^Bearer /, '')
+    JWT.decode(token)&.dig(0, 'user_id') if token
+  end
+  
+  # Extract tenant ID
+  config.extractor(:tenant_id) do |env, request|
+    request.headers['X-Tenant-ID'] || 
+    request.subdomain
+  end
+  
+  # Normalize API routes
+  config.extractor(:normalized_uri) do |env, request|
+    path = request.path
+    path.gsub(/\/\d+/, '/:id')          # /users/123 → /users/:id
+        .gsub(/\/[a-f0-9-]{36}/, '/:uuid') # UUIDs → :uuid
+  end
+end
+```
+
+### Rails Integration
+
+```ruby
+# config/application.rb
+class Application < Rails::Application
+  # Configure logger
+  Studist::Rack::Logger.configure do |config|
+    config.app_id = Rails.application.class.module_parent_name.downcase
+    config.logger = Rails.logger
+    config.sampling_rate = Rails.env.production? ? 0.1 : 1.0
+    config.skip_paths = %w[/health /assets]
+    
+    # Configure trusted proxies for production
+    config.trusted_proxies = Rails.env.production? ? 
+      ['10.0.0.0/8', '172.16.0.0/12'] : nil
+    
+    # Extract user from Devise/session
+    config.extractor(:user_id) do |env, request|
+      env['warden']&.user&.id
+    end
+  end
+  
+  # Add middleware
+  config.middleware.use Studist::Rack::Logger
+end
+```
+
+## 🔄 Migration from Hash Configuration
+
+### Before (Hash-based)
+```ruby
+use Studist::Rack::Logger,
+  app_id: 'my-service',
+  user_id_extractor: ->(env, req) { env['user.id'] },
+  normalized_uri_extractor: ->(env, req) { normalize_path(req.path) }
+```
+
+### After (DSL)
+```ruby
+Studist::Rack::Logger.configure do |config|
+  config.app_id = 'my-service'
+  config.extractor(:user_id) { |env, req| env['user.id'] }
+  config.extractor(:normalized_uri) { |env, req| normalize_path(req.path) }
+end
+
+use Studist::Rack::Logger
+```
+
+**Benefits of DSL:**
+- Global configuration reuse
+- Advanced filtering capabilities  
+- Better validation and error messages
+- More readable and maintainable
+- Supports complex conditional logic
 
 ---
 
