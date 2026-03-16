@@ -181,6 +181,32 @@ RSpec.describe Studist::Rack::Logger::Middleware do
       end
     end
 
+    context 'when internal logging fails' do
+      before { allow(logger).to receive(:info).and_raise(StandardError, 'logger failed') }
+
+      it 'does not raise an exception' do
+        expect { get '/test' }.not_to raise_error
+      end
+
+      it 'outputs a warning to stderr' do
+        expect { get '/test' }.to output(/Studist::Rack::Logger failed to log/).to_stderr
+      end
+    end
+
+    context 'when hostname cannot be determined' do
+      let(:middleware) do
+        allow(Socket).to receive(:gethostname).and_raise(StandardError, 'hostname unavailable')
+        described_class.new(base_app, options)
+      end
+
+      before { get '/test' }
+
+      it 'falls back to "unknown" as server_name' do
+        log_entry = JSON.parse(log_output.string.strip)
+        expect(log_entry['server_name']).to eq('unknown')
+      end
+    end
+
     context 'with different response status codes' do
       let(:base_app) { proc { |_env| [404, { 'Content-Type' => 'text/plain' }, ['Not Found']] } }
 
@@ -254,7 +280,7 @@ RSpec.describe Studist::Rack::Logger::Middleware do
   end
 
   describe 'complete log output verification' do
-    context 'comprehensive test with all 18 fields' do
+    context 'comprehensive test with all 22 fields' do
       let(:base_app) do
         proc { |_env|
           [201, { 'Content-Length' => '250', 'Content-Type' => 'application/json' }, ['{"data":"test"}']]
@@ -281,7 +307,7 @@ RSpec.describe Studist::Rack::Logger::Middleware do
         post '/api/test/123?filter=active&sort=name', 'test post data'
       end
 
-      it 'outputs all 18 specification fields in JSON format' do
+      it 'outputs all 22 specification fields in JSON format' do
         log_entry = JSON.parse(log_output.string.strip)
 
         # Basic fields (6 items)
@@ -331,7 +357,7 @@ RSpec.describe Studist::Rack::Logger::Middleware do
       end
     end
 
-    context 'LTSV format with all 18 fields' do
+    context 'LTSV format with all 22 fields' do
       let(:options) do
         {
           logger: logger,

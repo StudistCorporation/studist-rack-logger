@@ -8,7 +8,7 @@ module Studist
       # Builds structured log entries from request context.
       #
       # This class extracts and organizes request/response information into
-      # a standardized hash structure with 18 fields following Studist's
+      # a standardized hash structure with 22 fields following Studist's
       # common log format specification.
       #
       # @api private
@@ -16,8 +16,10 @@ module Studist
         # Initializes the builder with configuration options.
         #
         # @param options [Hash] Configuration options including extractors
-        def initialize(options)
+        # @param hostname [String, nil] Pre-resolved hostname to avoid repeated system calls
+        def initialize(options, hostname: nil)
           @options = options
+          @hostname = hostname
           @remote_ip_extractor = RemoteIp.new(trusted_proxies: options[:trusted_proxies])
         end
 
@@ -100,11 +102,7 @@ module Studist
           end
 
           def extract_server_name(_env)
-            # Use cached hostname from middleware if available
-            return @hostname if defined?(@hostname) && @hostname
-
-            # Fallback to system hostname
-            Socket.gethostname
+            @hostname || Socket.gethostname
           rescue StandardError
             'unknown'
           end
