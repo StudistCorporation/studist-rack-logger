@@ -13,7 +13,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '4.0.1'
+          ruby-version: '4.0.6'
           bundler-cache: true
       - name: Run RuboCop
         run: bundle exec rubocop
@@ -26,7 +26,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '4.0.1'
+          ruby-version: '4.0.6'
           bundler-cache: true
       - name: Check YARD documentation coverage
         run: bundle exec yard stats --list-undoc
