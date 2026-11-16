@@ -18,6 +18,7 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = '>= 3.0.0'
   s.add_dependency 'json', '>= 2.0'
+  s.add_dependency 'logger', '>= 1.6'
   s.add_dependency 'rack', '>= 2.0'
   s.test_files = Dir['spec/**/*']
 
