@@ -3,7 +3,7 @@
 > Unified structured logging middleware for Rack applications
 
 [![Gem Version](https://badge.fury.io/rb/studist-rack-logger.svg)](https://badge.fury.io/rb/studist-rack-logger)
-[![Ruby](https://img.shields.io/badge/ruby-%3E%3D%203.0.0-ruby.svg)](https://www.ruby-lang.org/en/)
+[![Ruby](https://img.shields.io/badge/ruby-%3E%3D%203.3.0-ruby.svg)](https://www.ruby-lang.org/en/)
 
 ## 🚀 Installation
 

@@ -406,7 +406,8 @@ RSpec.describe Studist::Rack::Logger::Middleware do
     context 'nil value handling verification' do
       let(:base_app) { proc { |_env| [200, {}, ['']] } }
 
-      before { get '/test' }
+      # Rack 2 sets CONTENT_LENGTH="0" for an empty body; Rack 3 omits it
+      before { get '/test', {}, { 'CONTENT_LENGTH' => nil } }
 
       it 'handles nil values appropriately' do
         log_entry = JSON.parse(log_output.string.strip)
