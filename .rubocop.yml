@@ -6,6 +6,7 @@ AllCops:
     - "vendor/**/*"
     - "Gemfile"
     - "Gemfile.lock"
+    - "gemfiles/*"
     - "*.gemspec"
 
 # 不要なreturnは省略する指摘
