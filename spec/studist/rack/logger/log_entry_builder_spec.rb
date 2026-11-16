@@ -139,7 +139,8 @@ RSpec.describe Studist::Rack::Logger::LogEntryBuilder do
     end
 
     context 'nil value handling' do
-      let(:env) { Rack::MockRequest.env_for('/test', 'studist.request_id' => 'req-1') }
+      # Rack 2 sets CONTENT_LENGTH="0" for an empty body; Rack 3 omits it
+      let(:env) { Rack::MockRequest.env_for('/test', 'studist.request_id' => 'req-1', 'CONTENT_LENGTH' => nil) }
       let(:headers) { {} }
 
       it 'omits query_string when empty' do
