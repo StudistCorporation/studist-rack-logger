@@ -101,4 +101,4 @@ DEPENDENCIES
   yard (~> 0.9)
 
 BUNDLED WITH
-   2.5.22
+  4.0.20
